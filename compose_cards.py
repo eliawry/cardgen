@@ -3,7 +3,7 @@ from PIL import Image
 import os
 import random
 
-NUM_FRAMES = 17
+NUM_FRAMES = 32
 # random utilities. At the top bc this is for pasting into ipython bc
 # i am a bum
 # i'm only even writing helper functions cause i'm out of private
@@ -45,21 +45,21 @@ def compose_cards():
 
 def up_down_fade(background, back_pixels, front_pixels, folder):
     """An in-place fade of the back to the front, saving in the folder"""
-    for iteration in xrange(background.size[1] / 32 + 1):
+    for iteration in xrange(background.size[1] / 64 + 1):
         for i in xrange(background.size[0]):
             for j in xrange(background.size[1]):
-                if j <= iteration * 32:
+                if j <= iteration * 64:
                     back_pixels[i, j] = front_pixels[i, j]
         background.save(folder + '/' + str(iteration).zfill(4) + '.png')
 
 
 def left_right_fade(background, back_pixels, front_pixels, folder):
     """An in-place fade of the left to the right, saving in the folder"""
-    for iteration in xrange(background.size[0] / 32 + 1):
+    for iteration in xrange(background.size[1] / 64 + 1):
         for i in xrange(background.size[1]):
             for j in xrange(background.size[0]):
-                if i <= iteration * 32:
-                    back_pixels[i, j] = front_pixels[i, j]
+                if j <= iteration * 64:
+                    back_pixels[j, i] = front_pixels[j, i]
         background.save(folder + '/' + str(iteration).zfill(4) + '.png')
 
 
@@ -67,17 +67,18 @@ def random_fade(background, back_pixels, front_pixels, folder):
     """A random fade of the card, a few pixels at a time"""
     x = background.size[0]
     y = background.size[1]
-    l = random.shuffle(xrange(x * y))
+    l = range(x * y)
+    random.shuffle(l)
     frame_to_render = {i : l[i] % NUM_FRAMES for i in xrange(x*y)}
 
     for iteration in xrange(NUM_FRAMES):
-        for i in xrange(background.size[1]):
-            for j in xrange(background.size[0]):
-                if frame_to_render[x * y] <= iteration:
+        for i in xrange(background.size[0]):
+            for j in xrange(background.size[1]):
+                if frame_to_render[i * background.size[1] +  j ] <= iteration:
                     back_pixels[i, j] = front_pixels[i, j]
         background.save(folder + '/' + str(iteration).zfill(4) + '.png')
 
-def make_gifs()
+def make_gifs():
     """Generate a gif for each card"""
     # now we want to simulate flipping the card in some way
     for suit, value in iterdeck():
@@ -89,5 +90,11 @@ def make_gifs()
             print "Warning: overwriting the last thing in /%s" % dir_for(suit, value)
         back_pixels = background.load()
         front_pixels = overlay.load()
-        up_down_fade(background, back_pixels, front_pixels, dir_for(suit, value))
-        os.system("convert -delay 50 -loop 1 %s/*.png %s.gif" % (dir_for(suit, value), dir_for(suit, value)))
+        r = random.choice(range(3))
+        if r == 1:
+            up_down_fade(background, back_pixels, front_pixels, dir_for(suit, value))
+        elif r == 2:
+            left_right_fade(background, back_pixels, front_pixels, dir_for(suit, value))
+        else:
+            random_fade(background, back_pixels, front_pixels, dir_for(suit, value))
+        os.system("convert -delay 10 -loop 1 %s/*.png %s.gif" % (dir_for(suit, value), dir_for(suit, value)))
